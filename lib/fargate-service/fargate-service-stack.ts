@@ -13,6 +13,8 @@ import {FargateServiceProps} from './interfaces/fargate-service-props';
 export class FargateServiceStack extends Stack {
 
     /**
+     * FargateServiceStack constructor
+     *
      * @param scope
      * @param id
      * @param props
@@ -29,6 +31,9 @@ export class FargateServiceStack extends Stack {
 
     /**
      * Create a VPC for the service
+     *
+     * @param props
+     * @private
      */
     private createVpc(props: FargateServiceProps): ec2.Vpc {
         return new ec2.Vpc(this, `${props.serviceName}Vpc`, {
