@@ -1,12 +1,14 @@
-import {Stack, StackProps} from 'aws-cdk-lib';
+import {Stack} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
-import { DockerImageAsset } from "aws-cdk-lib/aws-ecr-assets";
+import {DockerImageAsset} from "aws-cdk-lib/aws-ecr-assets";
 import path = require('path');
 import cdk = require('aws-cdk-lib');
 import {Vpc} from "aws-cdk-lib/aws-ec2";
+import {FargateServiceProps} from './interfaces/fargate-service-props';
+
 
 export class FargateServiceStack extends Stack {
 
@@ -15,24 +17,22 @@ export class FargateServiceStack extends Stack {
      * @param id
      * @param props
      */
-    constructor(scope: Construct, id: string, props?: StackProps) {
+    constructor(scope: Construct, id: string, props: FargateServiceProps) {
         super(scope, id, props);
 
-        const serviceName = this.node.tryGetContext('service-name');
+        const vpc = this.createVpc(props);
 
-        const vpc = this.createVpc(serviceName);
+        const cluster = this.createCluster(props, vpc);
 
-        const cluster = this.createCluster(serviceName, vpc);
-
-        this.createLoadBalancedFargateTaskDefinition(serviceName, vpc, cluster);
+        this.createLoadBalancedFargateTaskDefinition(props, vpc, cluster);
     }
 
     /**
      * Create a VPC for the service
      */
-    private createVpc(serviceName: string): ec2.Vpc {
-        return new ec2.Vpc(this, `${serviceName}Vpc`, {
-            vpcName: `${serviceName}Vpc`,
+    private createVpc(props: FargateServiceProps): ec2.Vpc {
+        return new ec2.Vpc(this, `${props.serviceName}Vpc`, {
+            vpcName: `${props.serviceName}Vpc`,
             cidr: '10.0.0.0/16',
             natGateways: 1,
             maxAzs: 3,
@@ -58,50 +58,45 @@ export class FargateServiceStack extends Stack {
 
 
     /**
-     *
-     * @param serviceName
+     * @param props
      * @param vpc
      * @private
      */
-    private createCluster(serviceName: string, vpc: Vpc): ecs.Cluster {
-        return new ecs.Cluster(this, `${serviceName}Cluster`, {
+    private createCluster(props: FargateServiceProps, vpc: Vpc): ecs.Cluster {
+        return new ecs.Cluster(this, `${props.serviceName}Cluster`, {
             vpc: vpc
         });
     }
 
     /**
      *
-     * @param serviceName
+     * @param props
      * @param vpc
      * @param cluster
      */
-    private createLoadBalancedFargateTaskDefinition(serviceName: string, vpc: ec2.Vpc, cluster: ecs.Cluster) {
+    private createLoadBalancedFargateTaskDefinition(props: FargateServiceProps, vpc: ec2.Vpc, cluster: ecs.Cluster) {
 
-        const memoryLimit = this.node.tryGetContext('memory-limit');
-        const cpu = this.node.tryGetContext('cpu');
-        const htpasswd = this.node.tryGetContext('htpasswd')
-
-        const taskDefinition = new ecs.FargateTaskDefinition(this, `${serviceName}TaskDefinition`, {
-            memoryLimitMiB: memoryLimit,
-            cpu: cpu
+        const taskDefinition = new ecs.FargateTaskDefinition(this, `${props.serviceName}TaskDefinition`, {
+            memoryLimitMiB: props.memoryLimit === undefined ? 512 : props.memoryLimit,
+            cpu: props.cpu === undefined ? 256 : props.cpu
         })
 
-        const nginxImage = new DockerImageAsset(this, `${serviceName}NginxImage`, {
-            directory: path.join(__dirname, 'nginx'),
+        const nginxImage = new DockerImageAsset(this, `${props.serviceName}NginxImage`, {
+            directory: path.join(__dirname, '..', 'nginx'),
             buildArgs: {
-                HTPASSWD: htpasswd
+                HTPASSWD: props.htpasswd
             }
         });
 
-        new ecs.ContainerDefinition(this, `${serviceName}NginxTask`, {
+        new ecs.ContainerDefinition(this, `${props.serviceName}NginxTask`, {
             image: ecs.ContainerImage.fromDockerImageAsset(nginxImage),
             taskDefinition: taskDefinition,
-            logging: new ecs.AwsLogDriver({ streamPrefix: `${serviceName}NginxTask` })
+            logging: new ecs.AwsLogDriver({streamPrefix: `${props.serviceName}NginxTask`})
         }).addPortMappings({
             containerPort: 80
         });
 
-        const fargateService = new ecs_patterns.ApplicationLoadBalancedFargateService(this, `${serviceName}AppTask`, {
+        const fargateService = new ecs_patterns.ApplicationLoadBalancedFargateService(this, `${props.serviceName}AppTask`, {
             cluster: cluster,
             taskDefinition: taskDefinition,
             desiredCount: 1,
@@ -110,16 +105,13 @@ export class FargateServiceStack extends Stack {
         });
 
         fargateService.targetGroup.configureHealthCheck({
-            path: '/health',
-            interval: cdk.Duration.seconds(5),
-            unhealthyThresholdCount: 3,
-            healthyThresholdCount: 5
+            path: '/health'
         });
 
-        fargateService.targetGroup.setAttribute('deregistration_delay.timeout_seconds', '10');
+        fargateService.targetGroup.setAttribute('deregistration_delay.timeout_seconds', '60');
 
         const scaling = fargateService.service.autoScaleTaskCount({maxCapacity: 2})
-        scaling.scaleOnCpuUtilization(`${serviceName}ScalingPolicy`, {
+        scaling.scaleOnCpuUtilization(`${props.serviceName}ScalingPolicy`, {
             targetUtilizationPercent: 50,
             scaleInCooldown: cdk.Duration.seconds(60),
             scaleOutCooldown: cdk.Duration.seconds(60)

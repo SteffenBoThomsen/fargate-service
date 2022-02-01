@@ -1,12 +1,11 @@
-### Fargate Service
+# Fargate Service
 
 ##### Table of Contents  
 1. [Assignment](#assignment)  
-2. [IAC](#iac)    
-
+2. [IAC Choice](#iac)    
 
 <a name="assignment"></a>
-## Assignment
+### Assignment
 
 You have taken ownership of an old legacy system, but it&#39;s not looking good. The
 legacy system builds a docker image that serves a simple HTML page, and deploys
@@ -24,9 +23,14 @@ Demonstrate a full deployment and injection of the secret using Infrastructure a
 Code (IAC).  
 
 <a name="iac"></a>
-## IAC
+### IAC Choice
 
+I went with the AWS CDK in TypeScript for the following reasons:
 
+1. It's customizable and reusable  
+2. Leverages full power of programming languages
+3. Is extendable through [jsii](https://aws.github.io/jsii/) for multi language support
+4. Testable through unit testing
 
-
-https://aws.github.io/jsii/
+There are some drawbacks, eg it's locked for the AWS Cloud, whereas other languages like
+[serverless](https://serverless.com) and [terraform](https://www.terraform.io) are cloud agnostic.

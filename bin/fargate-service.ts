@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { FargateServiceStack } from '../lib/fargate-service-stack';
+import {FargateServiceStack} from '../lib/fargate-service/fargate-service-stack';
 
 const production = {
     accountId: '221353586733',
@@ -9,6 +9,9 @@ const production = {
 }
 
 const app = new cdk.App();
+
 new FargateServiceStack(app, 'FargateServiceStack', {
-    env: production
+    env: production,
+    htpasswd: app.node.tryGetContext('htpasswd'),
+    serviceName: app.node.tryGetContext('service-name') ?? 'SampleFargateApp'
 });
