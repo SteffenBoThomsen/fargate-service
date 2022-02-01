@@ -6,7 +6,7 @@ import {FargateServiceStack} from '../lib/fargate-service/fargate-service-stack'
 const production = {
     accountId: '221353586733',
     region: 'eu-north-1'
-}
+};
 
 const app = new cdk.App();
 

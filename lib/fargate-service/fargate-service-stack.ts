@@ -53,7 +53,7 @@ export class FargateServiceStack extends Stack {
                     cidrMask: 28,
                 }
             ]
-        })
+        });
     }
 
 
@@ -69,7 +69,6 @@ export class FargateServiceStack extends Stack {
     }
 
     /**
-     *
      * @param props
      * @param vpc
      * @param cluster
@@ -79,7 +78,7 @@ export class FargateServiceStack extends Stack {
         const taskDefinition = new ecs.FargateTaskDefinition(this, `${props.serviceName}TaskDefinition`, {
             memoryLimitMiB: props.memoryLimit === undefined ? 512 : props.memoryLimit,
             cpu: props.cpu === undefined ? 256 : props.cpu
-        })
+        });
 
         const nginxImage = new DockerImageAsset(this, `${props.serviceName}NginxImage`, {
             directory: path.join(__dirname, '..', 'nginx'),

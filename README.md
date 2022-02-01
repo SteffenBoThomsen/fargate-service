@@ -2,7 +2,8 @@
 
 ##### Table of Contents  
 1. [Assignment](#assignment)  
-2. [IAC Choice](#iac)    
+2. [Solution](#solution)
+3. [IAC Choice](#iac)    
 
 <a name="assignment"></a>
 ### Assignment
@@ -21,6 +22,18 @@ password.
 Your first task as the owner of the legacy system is to ensure secrets handling.
 Demonstrate a full deployment and injection of the secret using Infrastructure as
 Code (IAC).  
+
+<a name="solution"></a>
+### Solution
+
+Took sensitive data out the repository and instead inject it as context to the Stack, eg
+
+```shell
+cdk deploy --context htpasswd=password
+```
+
+This works well with CI/CD pipelines where a previous step could build the context before deploying.
+Either from pipeline environment vars or by getting the value from AWS SSM.
 
 <a name="iac"></a>
 ### IAC Choice
